@@ -1,51 +1,20 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+def previous_odd_square(target):
+    last_x = 0
+    for x in range(target + 2):
+        if x**2 > target:
+            return last_x
+        last_x = x
+    raise Exception("Couldn't find an odd square <= {} (tried up to {})".format(target, last_x))
+
+def next_odd_square_root(target):
+    for x in range(1, target + 2, 2):
+        if x**2 >= target:
+            return x
+
 class Ring(object):
-    def __init__(self, position):
-        self.position = position
-        self.level, self.floor = self._values(self.position)
-        self.offset = self.position - self.floor
-        self.cardinals = self._cardinals()
-        self.distance_from_middle = 0 #FIXME
-
-    def _values(self, position):
-        last_answer = 0
-        last_level = 0
-        for level, x in enumerate(range(1, position+1, 2)):
-            square = level ** 2
-            if square == position:
-                return (level, x)
-            elif square > position:
-                return (last_level, last_answer + 1)
-            elif square % 2 != 0:
-                last_answer = square
-                last_level = level
-        raise Exception("Unable to find a value")
-
-    def _cardinals(self):
-        if self.level == 1:
-            return (1,)
-        corner_distance = (self.level - 1) ** 2
-        first_cardinal = self.floor + corner_distance - 1
-        return tuple([first_cardinal + corner_distance*x for x in range(4)])
-
-    def __repr__(self):
-        return "Ring({})".format( self.position,)
-
-
-    def __str__(self):
-        return repr(self) + "<level={}, floor={}, offset={}>".format(
-                self.level,
-                self.floor,
-                self.offset,
-                )
-
-    def manhattan(self):
-        return self.level + self.distance_from_middle
-
-
-class Grid(object):
     """Each square on the grid is allocated in a spiral pattern starting at
     a location marked 1 and then counting up while spiraling outward.
 
@@ -58,95 +27,147 @@ class Grid(object):
     21  22  23---> ...
     """
 
-    def biggest_odd_square(self, position):
-        pass
+    def __init__(self, position):
+        self.position = position
+        self.side_length = next_odd_square_root(self.position)
+        self.ceiling = self.side_length ** 2
+        self.level = level(self.position)
 
-    def manhattan(self, location):
-        """docstring for manhattan"""
-        return 0
+        self.offset = self.ceiling - self.position
+        self.cardinals = self._cardinals()
+        self.distance_from_middle = min([
+            abs(self.position - cardinal) for cardinal in self.cardinals
+            ])
+
+    def _cardinals(self):
+        if self.level == 0:
+            return (1,)
+        distance = self.side_length - 1
+        south = self.ceiling - distance / 2
+        west = south - distance
+        north = west - distance
+        east = north - distance
+        return (east, north, west, south)
+
+    def __repr__(self):
+        return "Ring({})".format( self.position,)
+
+
+    def __str__(self):
+        return repr(self) + "<level={}, ceiling={}, offset={}>".format(
+                self.level,
+                self.ceiling,
+                self.offset,
+                )
+
+    def manhattan(self):
+        if self.position == 1:
+            return 0
+        return self.level + self.distance_from_middle
+
+def level(position):
+    next_ceiling = next_odd_square_root(position)
+    level = (next_ceiling - 1) / 2
+    return level
+
+
+
+def test_get_level():
+    assert level(1) == 0
+    assert level(2) == 1
+    assert level(3) == 1
+    assert level(4) == 1
+    assert level(5) == 1
+    assert level(6) == 1
+    assert level(7) == 1
+    assert level(8) == 1
+    assert level(9) == 1
+    assert level(10) == 2
+    assert level(11) == 2
+    assert level(12) == 2
+    assert level(25) == 2
+    assert level(26) == 3
+
+
+def test_next_odd_square():
+    assert next_odd_square_root(1) == 1
+    assert next_odd_square_root(2) == 3
+    assert next_odd_square_root(3) == 3
+    assert next_odd_square_root(9) == 3
+    assert next_odd_square_root(10) == 5
+
+def test_previous_odd_square():
+    assert previous_odd_square(1) == 1
+    assert previous_odd_square(2) == 1
+    assert previous_odd_square(3) == 1
+    assert previous_odd_square(9) == 3
+    assert previous_odd_square(10) == 3
 
 def test_ring0():
     ring = Ring(1)
     assert ring.position == 1
     assert ring.level == 0
-    assert ring.floor == 1
-    assert ring.offset == 0
+    assert ring.side_length == 1
     assert ring.cardinals == (1,)
 
 def test_ring2():
     ring = Ring(2)
     assert ring.position == 2
     assert ring.level == 1
-    assert ring.floor == 2
-    assert ring.offset == 0
+    assert ring.side_length == 3
     assert ring.cardinals == (2, 4, 6, 8)
 
 def test_ring4():
     ring = Ring(4)
     assert ring.position == 4
     assert ring.level == 1
-    assert ring.floor == 2
-    assert ring.offset == 2
+    assert ring.side_length == 3
     assert ring.cardinals == (2, 4, 6, 8)
 
 def test_ring12():
     ring = Ring(12)
     assert ring.position == 12
     assert ring.level == 2
-    assert ring.floor == 10
-    assert ring.offset == 2
+    assert ring.side_length == 5
     assert ring.cardinals == (11, 15, 19, 23)
 
 def test_ring23():
     ring = Ring(23)
     assert ring.position == 23
     assert ring.level == 2
-    assert ring.floor == 10
-    assert ring.offset == 13
+    assert ring.side_length == 5
     assert ring.cardinals == (11, 15, 19, 23)
 
 def test_ring26():
     ring = Ring(26)
     assert ring.position == 26
     assert ring.level == 3
-    assert ring.floor == 26
-    assert ring.offset == 0
-    # assert ring.cardinals == (11, 15, 19, 23)
-    assert 49 in ring.cardinals
-
+    assert ring.cardinals == (28, 34, 40, 46)
+    assert ring.side_length == 7
 
 def test_ring27():
     ring = Ring(27)
     assert ring.position == 27
     assert ring.level == 3
-    assert ring.floor == 26
-    assert ring.offset == 1
-    # assert ring.cardinals == (11, 15, 19, 23)
-    assert 49 in ring.cardinals
-
+    assert ring.cardinals == (28, 34, 40, 46)
 
 def test1():
-    assert Grid().manhattan(1) == 0
+    assert Ring(1).manhattan() == 0
 
 def test2():
-    assert Grid().manhattan(11) == 2
+    assert Ring(11).manhattan() == 2
 
 def test3():
-    assert Grid().manhattan(23) == 2
+    assert Ring(23).manhattan() == 2
 
-"""
 def test2():
-    assert Grid().manhattan(12) == 3
+    assert Ring(12).manhattan() == 3
 
 def test4():
-    assert Grid().manhattan(1024) == 31
-"""
+    assert Ring(1024).manhattan() == 31
 
 def main():
-    print Grid().manhattan(277678)
+    print Ring(277678).manhattan()
 
 if __name__ == '__main__':
-    for x in range(1, 35):
-        r = Ring(x)
-        print (x, r.level)
     main()
