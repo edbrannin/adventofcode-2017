@@ -33,8 +33,8 @@ class Ring(object):
         self.ceiling = self.side_length ** 2
         self.level = level(self.position)
 
-        self.offset = self.ceiling - self.position
         self.cardinals = self._cardinals()
+        self.offset_to_ceiling = self.ceiling - self.position
         self.distance_from_middle = min([
             abs(self.position - cardinal) for cardinal in self.cardinals
             ])
@@ -54,10 +54,10 @@ class Ring(object):
 
 
     def __str__(self):
-        return repr(self) + "<level={}, ceiling={}, offset={}>".format(
+        return repr(self) + "<level={}, ceiling={}, offset_to_ceiling={}>".format(
                 self.level,
                 self.ceiling,
-                self.offset,
+                self.offset_to_ceiling,
                 )
 
     def manhattan(self):
